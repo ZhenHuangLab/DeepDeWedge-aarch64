@@ -99,13 +99,16 @@ class LitUnet3D(pl.LightningModule):
         """
         # we don't want to rotate the subtomos when updating them, so we create new dataloader objects with rotate_subtomos=False
         datasets = []
-        train_loader = self.trainer.train_dataloader.loaders
+        # pytorch-lightning >= 2.0 exposes the DataLoader directly instead of a
+        # CombinedLoader with a `.loaders` attribute.
+        train_loader = getattr(self.trainer.train_dataloader, "loaders", self.trainer.train_dataloader)
         train_set = train_loader.dataset
         train_set.rotate_subtomos = False
         datasets.append(train_set)
         # val_dataloaders may be None
         if self.trainer.val_dataloaders is not None:
-            val_loader = self.trainer.val_dataloaders[0]
+            val_dls = self.trainer.val_dataloaders
+            val_loader = val_dls[0] if isinstance(val_dls, (list, tuple)) else val_dls
             val_set = val_loader.dataset
             val_set.rotate_subtomos = False
             datasets.append(val_set)
